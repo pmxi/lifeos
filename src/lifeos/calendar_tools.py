@@ -143,7 +143,6 @@ TOOLS: list[dict[str, Any]] = [
             "required": [],
             "additionalProperties": False,
         },
-        "strict": True,
     },
     {
         "type": "function",
@@ -185,7 +184,6 @@ TOOLS: list[dict[str, Any]] = [
             "required": ["summary", "start_time", "end_time"],
             "additionalProperties": False,
         },
-        "strict": True,
     },
     {
         "type": "function",
@@ -231,7 +229,6 @@ TOOLS: list[dict[str, Any]] = [
             "required": ["event_id"],
             "additionalProperties": False,
         },
-        "strict": True,
     },
     {
         "type": "function",
