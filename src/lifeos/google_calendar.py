@@ -470,11 +470,11 @@ async def get_events(
 
 
 async def create_event(
-    user_google_email: Optional[str] = None,
     summary: str,
     start_time: str,
     end_time: str,
     calendar_id: str = "primary",
+    user_google_email: Optional[str] = None,
     description: Optional[str] = None,
     location: Optional[str] = None,
     attendees: Optional[List[str]] = None,
@@ -603,9 +603,9 @@ async def create_event(
 
 
 async def modify_event(
-    user_google_email: Optional[str] = None,
     event_id: str,
     calendar_id: str = "primary",
+    user_google_email: Optional[str] = None,
     summary: Optional[str] = None,
     start_time: Optional[str] = None,
     end_time: Optional[str] = None,
@@ -741,9 +741,9 @@ async def modify_event(
 
 
 async def delete_event(
-    user_google_email: Optional[str] = None,
     event_id: str,
     calendar_id: str = "primary",
+    user_google_email: Optional[str] = None,
 ) -> str:
     user_label = _user_label(user_google_email)
     service = await _get_calendar_service()
