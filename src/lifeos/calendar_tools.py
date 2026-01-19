@@ -1,7 +1,6 @@
 """Simplified calendar tool wrappers for the LLM agent.
 
 Wraps google_calendar.py functions with:
-- Fixed calendar_id="primary"
 - Removed unused parameters (color, meet, transparency, visibility, attachments)
 - Default reminders (no custom reminder support)
 - detailed=True by default for get_events
@@ -17,8 +16,6 @@ from lifeos.google_calendar import (
     modify_event as _modify_event,
 )
 
-CALENDAR_ID = "primary"
-
 
 async def list_calendars() -> str:
     """List all accessible calendars."""
@@ -26,6 +23,7 @@ async def list_calendars() -> str:
 
 
 async def get_events(
+    calendar_id: str = "primary",
     event_id: str | None = None,
     time_min: str | None = None,
     time_max: str | None = None,
@@ -34,7 +32,7 @@ async def get_events(
 ) -> str:
     """Get calendar events, optionally filtered by time range or search query."""
     return await _get_events(
-        calendar_id=CALENDAR_ID,
+        calendar_id=calendar_id,
         event_id=event_id,
         time_min=time_min,
         time_max=time_max,
@@ -48,6 +46,7 @@ async def create_event(
     summary: str,
     start_time: str,
     end_time: str,
+    calendar_id: str = "primary",
     description: str | None = None,
     location: str | None = None,
     attendees: list[str] | None = None,
@@ -55,7 +54,7 @@ async def create_event(
 ) -> str:
     """Create a new calendar event."""
     return await _create_event(
-        calendar_id=CALENDAR_ID,
+        calendar_id=calendar_id,
         summary=summary,
         start_time=start_time,
         end_time=end_time,
@@ -68,6 +67,7 @@ async def create_event(
 
 async def modify_event(
     event_id: str,
+    calendar_id: str = "primary",
     summary: str | None = None,
     start_time: str | None = None,
     end_time: str | None = None,
@@ -78,7 +78,7 @@ async def modify_event(
 ) -> str:
     """Modify an existing calendar event. Only provided fields are updated."""
     return await _modify_event(
-        calendar_id=CALENDAR_ID,
+        calendar_id=calendar_id,
         event_id=event_id,
         summary=summary,
         start_time=start_time,
@@ -90,10 +90,10 @@ async def modify_event(
     )
 
 
-async def delete_event(event_id: str) -> str:
+async def delete_event(event_id: str, calendar_id: str = "primary") -> str:
     """Delete a calendar event by ID."""
     return await _delete_event(
-        calendar_id=CALENDAR_ID,
+        calendar_id=calendar_id,
         event_id=event_id,
     )
 
@@ -119,6 +119,10 @@ TOOLS: list[dict[str, Any]] = [
         "parameters": {
             "type": "object",
             "properties": {
+                "calendar_id": {
+                    "type": "string",
+                    "description": "Calendar ID to query. Use 'primary' for main calendar.",
+                },
                 "event_id": {
                     "type": "string",
                     "description": "Specific event ID to fetch. If set, ignores time filters.",
@@ -163,6 +167,10 @@ TOOLS: list[dict[str, Any]] = [
                     "type": "string",
                     "description": "End time (RFC3339 or YYYY-MM-DD for all-day).",
                 },
+                "calendar_id": {
+                    "type": "string",
+                    "description": "Calendar ID. Use 'primary' for main calendar.",
+                },
                 "description": {
                     "type": "string",
                     "description": "Event description.",
@@ -195,6 +203,10 @@ TOOLS: list[dict[str, Any]] = [
                 "event_id": {
                     "type": "string",
                     "description": "ID of the event to modify.",
+                },
+                "calendar_id": {
+                    "type": "string",
+                    "description": "Calendar ID. Use 'primary' for main calendar.",
                 },
                 "summary": {
                     "type": "string",
@@ -241,10 +253,13 @@ TOOLS: list[dict[str, Any]] = [
                     "type": "string",
                     "description": "ID of the event to delete.",
                 },
+                "calendar_id": {
+                    "type": "string",
+                    "description": "Calendar ID. Use 'primary' for main calendar.",
+                },
             },
             "required": ["event_id"],
             "additionalProperties": False,
         },
-        "strict": True,
     },
 ]
