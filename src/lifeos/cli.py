@@ -1,9 +1,11 @@
+import asyncio
+
 from dotenv import load_dotenv
 
 from lifeos import logging
 
 
-def main():
+async def run_cli() -> None:
     load_dotenv()
     logging.setup()
 
@@ -14,7 +16,7 @@ def main():
 
     while True:
         try:
-            user_input = input("> ")
+            user_input = await asyncio.to_thread(input, "> ")
         except (EOFError, KeyboardInterrupt):
             print()
             break
@@ -22,8 +24,12 @@ def main():
         if not user_input.strip():
             continue
 
-        response = process_message(user_input, chat_id="cli")
+        response = await process_message(user_input, chat_id="cli")
         print(response)
+
+
+def main() -> None:
+    asyncio.run(run_cli())
 
 
 if __name__ == "__main__":

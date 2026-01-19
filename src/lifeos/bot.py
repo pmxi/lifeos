@@ -27,7 +27,7 @@ async def handle_message(update: Update, context) -> None:
 
     log.info("Received message from %s", update.message.from_user.username if update.message.from_user else "unknown")
     chat_id = str(update.message.chat_id)
-    response = process_message(update.message.text, chat_id)
+    response = await process_message(update.message.text, chat_id)
     await update.message.reply_text(response)
 
 

@@ -13,3 +13,6 @@ wheels/
 *.log
 .env
 .python-version
+.secrets/
+client_secret.json
+token.json

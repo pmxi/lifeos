@@ -31,3 +31,23 @@ Priority queue
 - make command for format files
 - Set up docker
 - add color to logging
+
+Setup (Calendar + Auth)
+- Create a Google Cloud project (new is recommended for clean separation).
+- Enable the Google Calendar API in that project.
+- Create a Google Cloud OAuth client (Desktop app) and download the client secret JSON:
+  - In Google Cloud Console, go to API & Services → Credentials.
+  - Click “Create Credentials” → “OAuth client ID”.
+  - If prompted, configure the OAuth consent screen (External is fine) and add your email as a test user.
+  - Choose “Desktop app” as the application type and create the client.
+  - Download the JSON file and keep its path for `GOOGLE_CLIENT_SECRET_PATH`.
+- Add a `.env` file in the repo root with:
+  - `OPENAI_API_KEY=...`
+  - `GOOGLE_CLIENT_SECRET_PATH=/absolute/path/to/client_secret.json`
+  - Optional: `GOOGLE_TOKEN_PATH=.secrets/google_token.json` (default)
+  - Optional: `GOOGLE_USER_EMAIL=you@example.com`
+- Tokens default to `.secrets/google_token.json` (gitignored).
+- Authenticate locally:
+  - `uv run lifeos-google-auth`
+- Run the CLI:
+  - `uv run lifeos-cli`
