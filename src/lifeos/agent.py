@@ -15,6 +15,13 @@ from lifeos.calendar_tools import (
     list_calendars,
     modify_event,
 )
+from lifeos.reminder_tools import (
+    TOOLS as REMINDER_TOOLS,
+    create_reminder,
+    delete_reminder,
+    list_reminders,
+    update_reminder,
+)
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +49,7 @@ EXECUTE_SQL_TOOL = {
     "strict": True,
 }
 
-TOOLS = [EXECUTE_SQL_TOOL] + CALENDAR_TOOLS
+TOOLS = [EXECUTE_SQL_TOOL] + CALENDAR_TOOLS + REMINDER_TOOLS
 
 INSTRUCTIONS = f"""You are a personal assistant with direct database access and Google Calendar integration.
 
@@ -60,6 +67,9 @@ Tools:
 - list_calendars: List available calendars
 - get_events, create_event, modify_event, delete_event: Manage calendar events
   Default to calendar_id="primary" unless the user specifies a different calendar.
+- create_reminder, list_reminders, update_reminder, delete_reminder: Manage reminders
+  Reminders wake you up at a scheduled time to run a prompt and send the response.
+  Use proactively when user asks to be reminded of something.
 
 Be direct. No pleasantries.
 """
@@ -126,6 +136,14 @@ async def process_message(user_message: str, chat_id: str) -> str:
                         output = await modify_event(**args)
                     elif fc.name == "delete_event":
                         output = await delete_event(**args)
+                    elif fc.name == "create_reminder":
+                        output = await asyncio.to_thread(create_reminder, **args)
+                    elif fc.name == "list_reminders":
+                        output = await asyncio.to_thread(list_reminders)
+                    elif fc.name == "update_reminder":
+                        output = await asyncio.to_thread(update_reminder, **args)
+                    elif fc.name == "delete_reminder":
+                        output = await asyncio.to_thread(delete_reminder, **args)
                     else:
                         output = f"Unknown tool: {fc.name}"
                 except Exception as exc:

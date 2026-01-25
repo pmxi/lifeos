@@ -23,6 +23,15 @@ CREATE TABLE IF NOT EXISTS note (
     content TEXT NOT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+-- reminder: scheduled prompts that wake up the agent
+CREATE TABLE IF NOT EXISTS reminder (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    prompt TEXT NOT NULL,
+    trigger_at TEXT NOT NULL,  -- RFC 3339 datetime
+    status TEXT DEFAULT 'pending',  -- 'pending', 'triggered', 'cancelled'
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
