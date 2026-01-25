@@ -51,6 +51,9 @@ EXECUTE_SQL_TOOL = {
 
 TOOLS = [EXECUTE_SQL_TOOL] + CALENDAR_TOOLS + REMINDER_TOOLS
 
+# TODO: Asking the LLM to escape MarkdownV2 is fragile. A better approach would be to let
+# the LLM write standard markdown, then parse it and convert to Telegram's MarkdownV2 format
+# in code (escaping literal special chars while preserving intentional formatting).
 INSTRUCTIONS = f"""You are a personal assistant with direct database access and Google Calendar integration.
 
 Database schema:
@@ -72,6 +75,12 @@ Tools:
   Use proactively when user asks to be reminded of something.
 
 Be direct. No pleasantries.
+
+Formatting: Responses are sent via Telegram with MarkdownV2 parsing.
+You MUST escape these characters with a backslash when used literally (not as formatting):
+_ * [ ] ( ) ~ ` > # + - = | {{ }} . !
+Example: "Hello\!" not "Hello!", "item \(1\)" not "item (1)", "test\_value" not "test_value".
+For code blocks, escape only ` and \\ characters.
 """
 
 
