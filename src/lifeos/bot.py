@@ -27,7 +27,7 @@ async def fire_due_reminders(bot, chat_id: str) -> None:
 
         try:
             response = await process_message(prompt, chat_id)
-            await bot.send_message(chat_id=chat_id, text=response)
+            await bot.send_message(chat_id=chat_id, text=response, parse_mode="MarkdownV2")
             execute_sql_tool(
                 f"UPDATE reminder SET status = 'triggered' WHERE id = {reminder_id}"
             )
@@ -76,7 +76,7 @@ async def handle_message(update: Update, context) -> None:
     log.info("Received message from %s", update.message.from_user.username if update.message.from_user else "unknown")
     chat_id = str(update.message.chat_id)
     response = await process_message(update.message.text, chat_id)
-    await update.message.reply_text(response)
+    await update.message.reply_text(response, parse_mode="MarkdownV2")
 
 
 def run_bot() -> None:
