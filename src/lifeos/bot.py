@@ -2,6 +2,7 @@ import logging
 import os
 from datetime import datetime, timezone
 
+import telegramify_markdown
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
@@ -28,7 +29,8 @@ async def fire_due_reminders(bot, chat_id: str) -> None:
         try:
             response = await process_message(prompt, chat_id)
             log.debug("Sending reminder response: %s", response)
-            await bot.send_message(chat_id=chat_id, text=response, parse_mode="MarkdownV2")
+            formatted = telegramify_markdown.markdownify(response)
+            await bot.send_message(chat_id=chat_id, text=formatted, parse_mode="MarkdownV2")
             execute_sql_tool(
                 f"UPDATE reminder SET status = 'triggered' WHERE id = {reminder_id}"
             )
@@ -78,7 +80,8 @@ async def handle_message(update: Update, context) -> None:
     chat_id = str(update.message.chat_id)
     response = await process_message(update.message.text, chat_id)
     log.debug("Sending response: %s", response)
-    await update.message.reply_text(response, parse_mode="MarkdownV2")
+    formatted = telegramify_markdown.markdownify(response)
+    await update.message.reply_text(formatted, parse_mode="MarkdownV2")
 
 
 def run_bot() -> None:
