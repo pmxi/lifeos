@@ -64,7 +64,7 @@ async def post_init(application: Application) -> None:
 
 
 async def handle_message(update: Update, context) -> None:
-    if not update.message or not update.message.text:
+    if not update.message:
         return
 
     # For DMs, chat.id == from_user.id (private chat ID equals user ID)
@@ -76,9 +76,25 @@ async def handle_message(update: Update, context) -> None:
         log.warning("Unauthorized user_id=%s", from_user.id)
         return
 
-    log.info("Received message from %s", update.message.from_user.username if update.message.from_user else "unknown")
+    # Extract text (from message or caption for photos)
+    text = update.message.text or update.message.caption or ""
+
+    # Extract image data if present
+    image_data: bytes | None = None
+    if update.message.photo:
+        # Get largest photo size (last in list)
+        photo = update.message.photo[-1]
+        file = await photo.get_file()
+        image_data = await file.download_as_bytearray()
+        log.info("Received photo from %s", from_user.username or "unknown")
+    elif not text:
+        # No text and no photo - nothing to process
+        return
+    else:
+        log.info("Received message from %s", from_user.username or "unknown")
+
     chat_id = str(update.message.chat_id)
-    response = await process_message(update.message.text, chat_id)
+    response = await process_message(text, chat_id, image_data)
     log.debug("Sending response: %s", response)
     formatted = telegramify_markdown.markdownify(response)
     await update.message.reply_text(formatted, parse_mode="MarkdownV2")
@@ -99,7 +115,9 @@ def run_bot() -> None:
     _allowed_user_id = user_id
 
     app = Application.builder().token(token).post_init(post_init).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(MessageHandler(
+        (filters.TEXT | filters.PHOTO) & ~filters.COMMAND, handle_message
+    ))
 
     log.info("Bot started")
     app.run_polling()

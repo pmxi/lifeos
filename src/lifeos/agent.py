@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import logging
 import os
@@ -81,9 +82,22 @@ def get_instructions() -> str:
 # the connection between using previous_response_id
 # and input parameter doesn't seem precisely documented.
 
-async def process_message(user_message: str, chat_id: str) -> str:
+async def process_message(
+    user_message: str, chat_id: str, image_data: bytes | None = None
+) -> str:
     log.debug("Processing message: %s", user_message)
-    input_items: list = [{"role": "user", "content": user_message}]
+
+    # Build content array for multimodal input
+    if image_data:
+        b64_image = base64.b64encode(image_data).decode("utf-8")
+        content: list = [
+            {"type": "input_text", "text": user_message},
+            {"type": "input_image", "image_url": f"data:image/jpeg;base64,{b64_image}"},
+        ]
+    else:
+        content = user_message  # type: ignore[assignment]
+
+    input_items: list = [{"role": "user", "content": content}]
 
     while True:
         log.debug("Calling OpenAI API")
