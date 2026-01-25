@@ -4,9 +4,9 @@ from datetime import datetime, timezone
 
 import telegramify_markdown
 from telegram import Update
-from telegram.ext import Application, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
-from lifeos.agent import process_message
+from lifeos.agent import clear_conversation, process_message
 from lifeos.db import execute_sql_tool, init_db
 
 log = logging.getLogger(__name__)
@@ -63,6 +63,21 @@ async def post_init(application: Application) -> None:
     log.info("Reminder scheduler started (30s interval)")
 
 
+async def handle_clear(update: Update, context) -> None:
+    """Handle /clear command to reset conversation history."""
+    if not update.message:
+        return
+
+    from_user = update.message.from_user
+    if not from_user or str(from_user.id) != _allowed_user_id:
+        return
+
+    chat_id = str(update.message.chat_id)
+    clear_conversation(chat_id)
+    log.info("Cleared conversation for chat_id=%s", chat_id)
+    await update.message.reply_text("Conversation cleared.")
+
+
 async def handle_message(update: Update, context) -> None:
     if not update.message:
         return
@@ -115,6 +130,7 @@ def run_bot() -> None:
     _allowed_user_id = user_id
 
     app = Application.builder().token(token).post_init(post_init).build()
+    app.add_handler(CommandHandler("clear", handle_clear))
     app.add_handler(MessageHandler(
         (filters.TEXT | filters.PHOTO) & ~filters.COMMAND, handle_message
     ))

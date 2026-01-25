@@ -79,6 +79,11 @@ Be direct. No pleasantries.
 def get_instructions() -> str:
     return INSTRUCTIONS.format(timestamp=datetime.now().isoformat())
 
+
+def clear_conversation(chat_id: str) -> None:
+    """Clear conversation history for a chat."""
+    _last_response_id.pop(chat_id, None)
+
 # the connection between using previous_response_id
 # and input parameter doesn't seem precisely documented.
 
