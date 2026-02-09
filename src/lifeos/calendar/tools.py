@@ -1,6 +1,6 @@
 """Simplified calendar tool wrappers for the LLM agent.
 
-Wraps google_calendar.py functions with:
+Wraps calendar.api functions with:
 - Removed unused parameters (color, meet, transparency, visibility, attachments)
 - Default reminders (no custom reminder support)
 - detailed=True by default for get_events
@@ -8,7 +8,7 @@ Wraps google_calendar.py functions with:
 
 from typing import Any
 
-from lifeos.google_calendar import (
+from lifeos.calendar.api import (
     create_event as _create_event,
     delete_event as _delete_event,
     get_events as _get_events,

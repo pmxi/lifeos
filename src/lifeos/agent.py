@@ -15,13 +15,23 @@ from openai.types.responses import (
 )
 
 from lifeos.db import SCHEMA, execute_sql_tool
-from lifeos.calendar_tools import (
+from lifeos.calendar import (
     TOOLS as CALENDAR_TOOLS,
     create_event,
     delete_event,
     get_events,
     list_calendars,
     modify_event,
+)
+from lifeos.gmail import (
+    TOOLS as GMAIL_TOOLS,
+    draft_gmail,
+    get_gmail_message,
+    get_gmail_thread,
+    list_gmail_labels,
+    modify_gmail_labels,
+    search_gmail,
+    send_gmail,
 )
 from lifeos.reminder_tools import (
     TOOLS as REMINDER_TOOLS,
@@ -63,7 +73,7 @@ EXECUTE_SQL_TOOL = {
     "strict": True,
 }
 
-TOOLS = [EXECUTE_SQL_TOOL] + CALENDAR_TOOLS + REMINDER_TOOLS
+TOOLS = [EXECUTE_SQL_TOOL] + CALENDAR_TOOLS + REMINDER_TOOLS + GMAIL_TOOLS
 
 INSTRUCTIONS = f"""You are a personal assistant with direct database access and Google Calendar integration.
 
@@ -84,6 +94,13 @@ Tools:
 - create_reminder, list_reminders, update_reminder, delete_reminder: Manage reminders
   Reminders wake you up at a scheduled time to run a prompt and send the response.
   Use proactively when user asks to be reminded of something.
+- search_gmail: Search emails using Gmail search syntax
+- get_gmail_message: Read a specific email by message ID
+- get_gmail_thread: Read all messages in an email thread
+- send_gmail: Send an email (supports replies via thread_id + in_reply_to)
+- draft_gmail: Create a draft email
+- list_gmail_labels: List all Gmail labels
+- modify_gmail_labels: Add/remove labels (archive, trash, mark read, etc.)
 
 Always read note(id=1) first.
 
@@ -158,6 +175,7 @@ async def process_message(
             tools=TOOLS,  # type: ignore TODO fix this typing.
             previous_response_id=_last_response_id.get(chat_id),
             store=True,
+            reasoning={"effort": "high"},
         )
         _last_response_id[chat_id] = response.id
         log.debug("OpenAI Response Object: %s", response.model_dump_json(indent=2))
@@ -215,6 +233,20 @@ async def process_message(
                         output = await asyncio.to_thread(update_reminder, **args)
                     elif fc.name == "delete_reminder":
                         output = await asyncio.to_thread(delete_reminder, **args)
+                    elif fc.name == "search_gmail":
+                        output = await search_gmail(**args)
+                    elif fc.name == "get_gmail_message":
+                        output = await get_gmail_message(**args)
+                    elif fc.name == "get_gmail_thread":
+                        output = await get_gmail_thread(**args)
+                    elif fc.name == "send_gmail":
+                        output = await send_gmail(**args)
+                    elif fc.name == "draft_gmail":
+                        output = await draft_gmail(**args)
+                    elif fc.name == "list_gmail_labels":
+                        output = await list_gmail_labels()
+                    elif fc.name == "modify_gmail_labels":
+                        output = await modify_gmail_labels(**args)
                     else:
                         output = f"Unknown tool: {fc.name}"
                 except Exception as exc:

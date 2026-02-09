@@ -16,6 +16,15 @@ DEFAULT_CALENDAR_SCOPES = [
     "https://www.googleapis.com/auth/calendar.events",
 ]
 
+DEFAULT_GMAIL_SCOPES = [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/gmail.compose",
+    "https://www.googleapis.com/auth/gmail.modify",
+]
+
+DEFAULT_SCOPES = DEFAULT_CALENDAR_SCOPES + DEFAULT_GMAIL_SCOPES
+
 
 def _get_token_path() -> Path:
     token_path = os.getenv("GOOGLE_TOKEN_PATH", ".secrets/google_token.json")
@@ -98,14 +107,15 @@ def get_credentials(
         flow.redirect_uri = redirect_uri
 
     try:
-        run_console = getattr(flow, "run_console", None)
-        if callable(run_console):
-            creds = run_console()
-        else:
-            creds = flow.run_local_server(port=0, open_browser=True)
+        creds = flow.run_local_server(port=0, open_browser=True)
     except Exception as exc:
-        log.warning("Falling back to manual OAuth flow: %s", exc)
-        auth_url, _ = flow.authorization_url(prompt="consent")
+        log.warning("Local server OAuth failed: %s", exc)
+        creds = None
+
+    if creds is None:
+        auth_url, _ = flow.authorization_url(
+            prompt="consent", access_type="offline"
+        )
         print("Authorize this app by visiting this URL:")
         print(auth_url)
         code = input("Enter the authorization code: ").strip()
@@ -135,7 +145,7 @@ def main() -> None:
     if args.scopes:
         scopes = [s.strip() for s in args.scopes.split(",") if s.strip()]
     else:
-        scopes = DEFAULT_CALENDAR_SCOPES
+        scopes = DEFAULT_SCOPES
 
     authenticate(scopes, force=args.force)
     token_path = _get_token_path()
