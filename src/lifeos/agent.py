@@ -85,6 +85,8 @@ Tools:
   Reminders wake you up at a scheduled time to run a prompt and send the response.
   Use proactively when user asks to be reminded of something.
 
+Always read note(id=1) first.
+
 Be direct. No pleasantries.
 """
 
