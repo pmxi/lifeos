@@ -18,7 +18,7 @@ sort imports?
 Anything else?
 
 Gmail/Google Calendar MCP
-https://github.com/taylorwilsdon/google_workspace_mcp 1.1k stars
+https://github.com/taylorwilsdon/google_workspace_mcp 1.1k stars (used this)
 https://github.com/j3k0/mcp-google-workspace 17 stars
 https://github.com/bastienchabal/gmail-mcp 0 stars
 
