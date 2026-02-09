@@ -6,8 +6,9 @@ import telegramify_markdown
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
-from lifeos.agent import clear_conversation, process_message
+from lifeos.agent import UploadedFile, clear_conversation, process_message
 from lifeos.db import execute_sql_tool, init_db
+from lifeos.speech import transcribe_audio
 
 log = logging.getLogger(__name__)
 
@@ -93,6 +94,10 @@ async def handle_message(update: Update, context) -> None:
 
     # Extract text (from message or caption for photos)
     text = update.message.text or update.message.caption or ""
+    if update.message.text:
+        log.debug("Text message length=%d", len(update.message.text))
+    if update.message.caption:
+        log.debug("Caption length=%d", len(update.message.caption))
 
     # Extract image data if present
     image_data: bytes | None = None
@@ -101,15 +106,80 @@ async def handle_message(update: Update, context) -> None:
         photo = update.message.photo[-1]
         file = await photo.get_file()
         image_data = await file.download_as_bytearray()
-        log.info("Received photo from %s", from_user.username or "unknown")
-    elif not text:
-        # No text and no photo - nothing to process
+        log.info(
+            "Received photo from %s (%d bytes)",
+            from_user.username or "unknown",
+            len(image_data),
+        )
+
+    # Extract PDF document data if present
+    uploaded_file: UploadedFile | None = None
+    if update.message.document:
+        document = update.message.document
+        filename = document.file_name or "upload.pdf"
+        mime_type = document.mime_type or "application/octet-stream"
+        is_pdf = mime_type == "application/pdf" or filename.lower().endswith(".pdf")
+
+        if not is_pdf:
+            log.info(
+                "Rejected non-PDF document from %s (%s, mime=%s)",
+                from_user.username or "unknown",
+                filename,
+                mime_type,
+            )
+            await update.message.reply_text("Only PDF uploads are supported right now.")
+            return
+
+        file = await document.get_file()
+        document_data = await file.download_as_bytearray()
+        uploaded_file = {
+            "filename": filename,
+            "mime_type": "application/pdf",
+            "data": bytes(document_data),
+        }
+        log.info(
+            "Received PDF from %s (%s, %d bytes)",
+            from_user.username or "unknown",
+            filename,
+            len(document_data),
+        )
+
+    # Extract voice data and transcribe if present
+    if update.message.voice:
+        file = await update.message.voice.get_file()
+        voice_data = await file.download_as_bytearray()
+        log.info(
+            "Received voice note from %s (%d bytes, duration=%ss)",
+            from_user.username or "unknown",
+            len(voice_data),
+            update.message.voice.duration,
+        )
+        try:
+            text = await transcribe_audio(bytes(voice_data), filename="voice.ogg")
+        except Exception:
+            log.exception("Failed to transcribe voice note")
+            await update.message.reply_text("Transcription failed.")
+            return
+        log.debug("Transcription text length=%d", len(text))
+
+    if not text and not image_data and not uploaded_file:
+        # No text, photo, or PDF - nothing to process
+        log.debug("No usable content found (text/photo/voice/pdf empty)")
         return
-    else:
+
+    if (
+        update.message.text
+        or update.message.caption
+        or update.message.voice
+        or update.message.document
+    ):
         log.info("Received message from %s", from_user.username or "unknown")
 
     chat_id = str(update.message.chat_id)
-    response = await process_message(text, chat_id, image_data)
+    response = await process_message(
+        text, chat_id, image_data=image_data, uploaded_file=uploaded_file
+    )
+    log.debug("LLM response length=%d", len(response))
     log.debug("Sending response: %s", response)
     formatted = telegramify_markdown.markdownify(response)
     await update.message.reply_text(formatted, parse_mode="MarkdownV2")
@@ -132,7 +202,9 @@ def run_bot() -> None:
     app = Application.builder().token(token).post_init(post_init).build()
     app.add_handler(CommandHandler("clear", handle_clear))
     app.add_handler(MessageHandler(
-        (filters.TEXT | filters.PHOTO) & ~filters.COMMAND, handle_message
+        (filters.TEXT | filters.PHOTO | filters.VOICE | filters.Document.ALL)
+        & ~filters.COMMAND,
+        handle_message,
     ))
 
     log.info("Bot started")

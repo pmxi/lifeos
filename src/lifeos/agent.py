@@ -4,8 +4,15 @@ import json
 import logging
 import os
 from datetime import datetime
+from typing import TypedDict, cast
 
 from openai import AsyncOpenAI
+from openai.types.responses import (
+    ResponseInputContentParam,
+    ResponseFunctionToolCall,
+    ResponseInputItemParam,
+    ResponseInputParam,
+)
 
 from lifeos.db import SCHEMA, execute_sql_tool
 from lifeos.calendar_tools import (
@@ -34,6 +41,12 @@ log = logging.getLogger(__name__)
 _last_response_id: dict[str, str] = {}
 
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+
+class UploadedFile(TypedDict):
+    filename: str
+    mime_type: str
+    data: bytes
 
 EXECUTE_SQL_TOOL = {
     "type": "function",
@@ -88,21 +101,51 @@ def clear_conversation(chat_id: str) -> None:
 # and input parameter doesn't seem precisely documented.
 
 async def process_message(
-    user_message: str, chat_id: str, image_data: bytes | None = None
+    user_message: str,
+    chat_id: str,
+    image_data: bytes | None = None,
+    uploaded_file: UploadedFile | None = None,
 ) -> str:
     log.debug("Processing message: %s", user_message)
 
     # Build content array for multimodal input
-    if image_data:
-        b64_image = base64.b64encode(image_data).decode("utf-8")
-        content: list = [
-            {"type": "input_text", "text": user_message},
-            {"type": "input_image", "image_url": f"data:image/jpeg;base64,{b64_image}"},
-        ]
-    else:
-        content = user_message  # type: ignore[assignment]
+    input_items: ResponseInputParam
+    if image_data or uploaded_file:
+        content: list[ResponseInputContentParam] = []
+        if user_message:
+            content.append(
+                cast(ResponseInputContentParam, {"type": "input_text", "text": user_message})
+            )
 
-    input_items: list = [{"role": "user", "content": content}]
+        if image_data:
+            b64_image = base64.b64encode(image_data).decode("utf-8")
+            content.append(
+                cast(
+                    ResponseInputContentParam,
+                    {
+                        "type": "input_image",
+                        "image_url": f"data:image/jpeg;base64,{b64_image}",
+                        "detail": "auto",
+                    },
+                )
+            )
+
+        if uploaded_file:
+            b64_file = base64.b64encode(uploaded_file["data"]).decode("utf-8")
+            content.append(
+                cast(
+                    ResponseInputContentParam,
+                    {
+                        "type": "input_file",
+                        "filename": uploaded_file["filename"],
+                        "file_data": f"data:{uploaded_file['mime_type']};base64,{b64_file}",
+                    },
+                )
+            )
+
+        input_items = cast(ResponseInputParam, [{"role": "user", "content": content}])
+    else:
+        input_items = cast(ResponseInputParam, [{"role": "user", "content": user_message}])
 
     while True:
         log.debug("Calling OpenAI API")
@@ -118,22 +161,29 @@ async def process_message(
         log.debug("OpenAI Response Object: %s", response.model_dump_json(indent=2))
 
         # Check for function calls in output
-        function_calls = [item for item in response.output if item.type == "function_call"]
+        function_calls = [
+            cast(ResponseFunctionToolCall, item)
+            for item in response.output
+            if item.type == "function_call"
+        ]
 
         if function_calls:
             # Only pass tool outputs; previous_response_id carries the function_call context
-            input_items = []
+            tool_outputs: list[ResponseInputItemParam] = []
             for fc in function_calls:
                 try:
                     args = json.loads(fc.arguments) if fc.arguments else {}
                 except json.JSONDecodeError as exc:
                     log.exception("Invalid arguments for tool %s", fc.name)
-                    input_items.append(
-                        {
-                            "type": "function_call_output",
-                            "call_id": fc.call_id,
-                            "output": f"Invalid arguments for {fc.name}: {exc}",
-                        }
+                    tool_outputs.append(
+                        cast(
+                            ResponseInputItemParam,
+                            {
+                                "type": "function_call_output",
+                                "call_id": fc.call_id,
+                                "output": f"Invalid arguments for {fc.name}: {exc}",
+                            },
+                        )
                     )
                     continue
 
@@ -169,13 +219,17 @@ async def process_message(
                     log.exception("Tool error in %s", fc.name)
                     output = f"Tool error in {fc.name}: {exc}"
 
-                input_items.append(
-                    {
-                        "type": "function_call_output",
-                        "call_id": fc.call_id,
-                        "output": output,
-                    }
+                tool_outputs.append(
+                    cast(
+                        ResponseInputItemParam,
+                        {
+                            "type": "function_call_output",
+                            "call_id": fc.call_id,
+                            "output": output,
+                        },
+                    )
                 )
+            input_items = tool_outputs
         else:
             # I'm worried this will swallow errors
             return response.output_text or ""

@@ -1,6 +1,4 @@
-# LifeOS
-
-A personal life operating system that proactively helps you manage your life.
+LifeOS is a personal life operating system to proactively helps you manage your life.
 
 ## Philosophy
 
@@ -28,12 +26,12 @@ The LLM has a single tool: `execute_sql`. It writes raw SQLite queries to manage
 
 ```
 src/lifeos/
-├── __main__.py   # Entry point for Telegram bot
-├── cli.py        # Entry point for CLI debugging
-├── bot.py        # Telegram handlers, reminder scheduler
-├── agent.py      # OpenAI Responses API, execute_sql tool
-├── db.py         # SQLite connection, schema
-└── logging.py    # Logging setup (UTC, RFC 3339)
+    __main__.py   # Entry point for Telegram bot
+    cli.py        # Entry point for CLI debugging
+    bot.py        # Telegram handlers, reminder scheduler
+    agent.py      # OpenAI Responses API, execute_sql tool
+    db.py         # SQLite connection, schema
+    logging.py    # Logging setup (UTC, RFC 3339)
 ```
 
 ## Key Files

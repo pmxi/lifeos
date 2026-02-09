@@ -22,7 +22,6 @@ https://github.com/taylorwilsdon/google_workspace_mcp 1.1k stars
 https://github.com/j3k0/mcp-google-workspace 17 stars
 https://github.com/bastienchabal/gmail-mcp 0 stars
 
-
 Priority queue
 - Allow lifeos calling itself
 - Improve schema
@@ -51,3 +50,9 @@ Setup (Calendar + Auth)
   - `uv run lifeos-google-auth`
 - Run the CLI:
   - `uv run lifeos-cli`
+
+
+competitors
+    https://github.com/clawdbot/clawdbot
+        https://news.ycombinator.com/item?id=46760237
+    poke.com
